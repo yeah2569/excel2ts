@@ -31,7 +31,7 @@ export namespace DataManager {
         }
         return values;
     }
-    function getsById(datas: Array<any>): { [key: number]: any } {
+    function getById(datas: Array<any>): { [key: number]: any } {
         let datasById: { [key: number]: any } = {};
         for (let data of datas) {
             datasById[data.ID] = data;

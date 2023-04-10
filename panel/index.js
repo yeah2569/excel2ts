@@ -81,7 +81,7 @@ Editor.Panel.extend({
                 onBtnClickSelectExcelRootPath() {
                     let res = Editor.Dialog.openFile({
                         title: "选择Excel的根目录",
-                        defaultPath: this.excelRootPath,
+                        //defaultPath: this.excelRootPath,
                         properties: ['openDirectory'],
                     });
                     if (res !== -1) {
@@ -97,7 +97,7 @@ Editor.Panel.extend({
                 onBtnClickSelectConfigPath() {
                     let res = Editor.Dialog.openFile({
                         title: "选择导出的配置目录",
-                        defaultPath: Editor.Project.path,
+                        //defaultPath: Editor.Project.path,
                         properties: ['openDirectory'],
                     });
                     if (res !== -1) {
@@ -237,18 +237,23 @@ Editor.Panel.extend({
                  */
                 _saveTypeInter(excelCache) {
                     let typeStr = "";
-                    let typeEnum = ["string", "number", "list<string>", "list<number>"];
+                    let typeEnum = ["string", "int", "list<string>", "list<int>"];
                     Object.getOwnPropertyNames(excelCache).forEach(key => {
                         excelCache[key].forEach(sheetData => {
                             if (sheetData.data.length < 4) {
                                 this._addLog(`表 ${key}--sheet ${sheetData.name} 行数小于3行,跳过`);
                                 return;
                             }
-                            let title = sheetData.data[0];  //
-                            let desc = sheetData.data[1];  //注释  描述
+                            let title = sheetData.data[1];  //
+                            let desc = sheetData.data[0];  //注释  描述
                             let type = sheetData.data[2];  //类型,
                             let sheetName = sheetData.name.match(/[^<]*\w+(?=>)*/)[0];
-                            typeStr += `export interface ${sheetName}Data{`
+                            let fIndex = key.lastIndexOf('\\');
+                            let lIndex = key.lastIndexOf('.');
+                            let typeName = key.substring(fIndex + 1, lIndex);
+
+                            //let typeName = key.match(/[^<]*\w+(?=>)*/)[0];
+                            typeStr += `export interface ${typeName}Data{`
                             for (let i = 0; i < type.length; i++) {
                                 let varName = title[i];
                                 let columDesc = desc[i];
@@ -261,10 +266,10 @@ Editor.Panel.extend({
                                         case "string":
                                             typeStr += `string;   ${columDesc}`;
                                             break;
-                                        case "number":
+                                        case "int":
                                             typeStr += `number; ${columDesc}`;
                                             break;
-                                        case "list<number>":
+                                        case "list<int>":
                                             typeStr += `Array<number>; ${columDesc}`;
                                             break;
                                         case "list<string>":
@@ -272,7 +277,7 @@ Editor.Panel.extend({
                                             break;
                                     }
                                 } else {
-                                    this._addLog("[Error] 发现空单元格type:" + itemSheet.name + ":" + columType + " =>类型不符合枚举值 [string] [number] [list<string>] [list<number>]");
+                                    this._addLog("[Error] 发现空单元格type:" + key + ":" + columType + " =>类型不符合枚举值 [string] [number] [list<string>] [list<number>]");
                                 }
                             }
                             typeStr += `};\n`;
@@ -337,7 +342,7 @@ Editor.Panel.extend({
                                         continue;
                                     }
                                     for (let j = 0; j < attrLength; j++) {
-                                        let key = sheetData.data[0][j];
+                                        let key = sheetData.data[1][j];
                                         let value = sheetData.data[i][j];
                                         if (value !== undefined) {
                                             let type = sheetData.data[2][j].toLowerCase();
@@ -345,13 +350,13 @@ Editor.Panel.extend({
                                             if (typeArray) {
                                                 // number list
                                                 value = (value + "").split(",");
-                                                if (typeArray[0] === "number") {
+                                                if (typeArray[0] === "int") {
                                                     value = value.reduce((pre, cur) => {
                                                         pre.push(Number(cur));
                                                         return pre;
                                                     }, []);
                                                 }
-                                            } else if (type === "number") {
+                                            } else if (type === "int") {
                                                 value = Number(value);
                                             } else if (type === "string") {
                                                 value = value + "";
@@ -367,7 +372,10 @@ Editor.Panel.extend({
                                     cloumMap[sheetData.data[i][0]] = keyMap;
                                 }
                                 //去掉sheetName中文部分
-                                let sheetName = sheetData.name.match(/[^<]*\w+(?=>)*/)[0];
+                                //let sheetName = sheetData.name.match(/[^<]*\w+(?=>)*/)[0];
+                                let fIndex = key.lastIndexOf('\\');
+                                let lIndex = key.lastIndexOf('.');
+                                let sheetName = key.substring(fIndex + 1, lIndex);
                                 jsSaveData[sheetName] = cloumMap;
                             } else {
                                 this._addLog("行数低于3行,无效sheet:" + sheetData.name);
@@ -389,7 +397,7 @@ Editor.Panel.extend({
                         fs.writeFile(saveFileFullPath, ret.code, "utf-8");
                         Editor.assetdb.refresh('db://assets/');
                         this._addLog("[JavaScript]" + saveFileFullPath);
-                    } 
+                    }
                 },
                 addAsType(excelCache) {
                     let importContent = "";
@@ -404,9 +412,13 @@ Editor.Panel.extend({
                                 return;
                             }
 
-                            let idType = sheetData.data[2][0];  //id的类型
+                            let idType = sheetData.data[2][0].toLowerCase();  //id的类型
+                            if (idType == 'int') idType = 'number';
                             //去掉sheetName中文部分
-                            let sheetName = sheetData.name.match(/[^<]*\w+(?=>)*/)[0];
+                            //let sheetName = sheetData.name.match(/[^<]*\w+(?=>)*/)[0];
+                            let fIndex = key.lastIndexOf('\\');
+                            let lIndex = key.lastIndexOf('.');
+                            let sheetName = key.substring(fIndex + 1, lIndex);
                             //add datamanager
                             //添加import内容------------
 
